@@ -128,56 +128,68 @@ RegisterNetEvent("weapons:client:EquipAttachment", function(ItemData, attachment
     end
 end)
 
+RegisterNetEvent("weapons:weapcheck", function()
+    local ped = PlayerPedId()
+    local weapon = GetSelectedPedWeapon(ped)
+    if CanShoot then
+        if weapon and weapon ~= 0 and QBCore.Shared.Weapons[weapon] then
+            QBCore.Functions.TriggerCallback('prison:server:checkThrowable', function(result)
+                if result or GetAmmoInPedWeapon(ped, weapon) <= 0 then return end
+                MultiplierAmount += 1
+            end, weapon)
+            Wait(200)
+        end
+    else
+        if weapon ~= `WEAPON_UNARMED` then
+            TriggerEvent('inventory:client:CheckWeapon', QBCore.Shared.Weapons[weapon]["name"])
+            QBCore.Functions.Notify(Lang:t('error.weapon_broken'), "error")
+            MultiplierAmount = 0
+        end
+    end
+end)
+
 -- Threads
 
 CreateThread(function()
     SetWeaponsNoAutoswap(true)
 end)
 
-CreateThread(function()
-    while true do
-        local ped = PlayerPedId()
-        if IsPedArmed(ped, 7) == 1 and (IsControlJustReleased(0, 24) or IsDisabledControlJustReleased(0, 24)) then
-            local weapon = GetSelectedPedWeapon(ped)
-            local ammo = GetAmmoInPedWeapon(ped, weapon)
+function ammoupdater()
+    local wait = 0
+    local ped = PlayerPedId()
+    if IsPedArmed(ped, 7) == 1 and (IsControlJustReleased(0, 24) or IsDisabledControlJustReleased(0, 24)) then
+        local wait = 0
+        local weapon = GetSelectedPedWeapon(ped)
+        local ammo = GetAmmoInPedWeapon(ped, weapon)
+        if ammo ~= oldammo then
             TriggerServerEvent("weapons:server:UpdateWeaponAmmo", CurrentWeaponData, tonumber(ammo))
-            if MultiplierAmount > 0 then
-                TriggerServerEvent("weapons:server:UpdateWeaponQuality", CurrentWeaponData, MultiplierAmount)
-                MultiplierAmount = 0
-            end
         end
-        Wait(0)
+        if MultiplierAmount > 0 then
+            TriggerServerEvent("weapons:server:UpdateWeaponQuality", CurrentWeaponData, MultiplierAmount)
+            MultiplierAmount = 0
+        end
+        local oldammo = GetAmmoInPedWeapon(ped, weapon)
+    else
+        local wait = 50
     end
-end)
+    SetTimeout(wait, ammoupdater)
+end
+ammoupdater()
 
-CreateThread(function()
-    while true do
-        if LocalPlayer.state.isLoggedIn then
-            local ped = PlayerPedId()
-            if CurrentWeaponData and next(CurrentWeaponData) then
-                if IsPedShooting(ped) or IsControlJustPressed(0, 24) then
-                    local weapon = GetSelectedPedWeapon(ped)
-                    if CanShoot then
-                        if weapon and weapon ~= 0 and QBCore.Shared.Weapons[weapon] then
-                            QBCore.Functions.TriggerCallback('prison:server:checkThrowable', function(result)
-                                if result or GetAmmoInPedWeapon(ped, weapon) <= 0 then return end
-                                MultiplierAmount += 1
-                            end, weapon)
-                            Wait(200)
-                        end
-                    else
-                        if weapon ~= `WEAPON_UNARMED` then
-                            TriggerEvent('inventory:client:CheckWeapon', QBCore.Shared.Weapons[weapon]["name"])
-                            QBCore.Functions.Notify(Lang:t('error.weapon_broken'), "error")
-                            MultiplierAmount = 0
-                        end
-                    end
-                end
-            end
+
+function weaponcheck()
+    local wait = 50
+    local ped = PlayerPedId()
+    if CurrentWeaponData and next(CurrentWeaponData) then
+        local wait = 4
+        if IsPedShooting(ped) or IsControlJustPressed(0, 24) then
+            local wait = 4
+            weaponcheck('weapons:weapcheck')
         end
-        Wait(0)
-    end
-end)
+    end 
+    SetTimeout(wait, waitthreelol)
+end
+weaponcheck()
 
 CreateThread(function()
     while true do
