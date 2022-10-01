@@ -184,10 +184,10 @@ function weaponcheck()
         local wait = 4
         if IsPedShooting(ped) or IsControlJustPressed(0, 24) then
             local wait = 4
-            weaponcheck('weapons:weapcheck')
+            TriggerEvent('weapons:weapcheck')
         end
     end 
-    SetTimeout(wait, waitthreelol)
+    SetTimeout(wait, weaponcheck)
 end
 weaponcheck()
 
